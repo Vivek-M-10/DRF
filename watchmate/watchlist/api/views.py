@@ -1,59 +1,59 @@
 
+from urllib import response
 from rest_framework import status
 from watchlist.models import Movie
 from rest_framework.response import Response
 from watchlist.api.serializers import MovieSerializer
-from rest_framework.decorators import api_view
+from rest_framework .views import APIView
 
-@api_view(['GET', 'POST'])
-def movie_list(request):
-    if request.method == 'POST':
-        is_bulk = isinstance(request.data, list)
-        serializer = MovieSerializer(data=request.data, many=is_bulk)
+class MovieListView(APIView):
+    def get(self, request):
+        movies = Movie.objects.all()
+        serializer = MovieSerializer(movies, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def post(self, request):
+        isbulk = isinstance(request.data, list)
+        serializer = MovieSerializer(data=request.data, many=isbulk)
         if serializer.is_valid():
             movies = serializer.save()
             response_data = (
-                MovieSerializer(movies, many=True).data if is_bulk
-                else MovieSerializer(movies).data
+                MovieSerializer(movies, many=True).data
+                if isbulk else MovieSerializer(movies).data
             )
-            return Response(response_data, status= status.HTTP_201_CREATED if is_bulk else status.HTTP_200_OK)
+            return Response(response_data, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status= status.HTTP_400_BAD_REQUEST)
-
-    if request.method == 'GET':
-        movies = Movie.objects.all()
-        serializer = MovieSerializer(movies, many=True)
-        return Response(serializer.data, status= status.HTTP_200_OK)    
-
-@api_view(['GET', 'PUT', 'DELETE'])
-def movie_detail(request, pk):
-    if request.method == 'GET':
-        try :
-            movie = Movie.objects.get(pk=pk)
-        except Movie.DoesNotExist:
-            return Response({'error': 'Movie not found'}, status= status.HTTP_404_NOT_FOUND)
-
-        serializer = MovieSerializer(movie)
-        return Response(serializer.data, status= status.HTTP_200_OK)
-
-    if request.method == 'PUT':
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class MovieDetailView(APIView):
+    def get_object(self, pk):
         try:
-            movie = Movie.objects.get(pk=pk)
+            return Movie.objects.get(pk=pk)
         except Movie.DoesNotExist:
-            return Response({'error': 'Movie not found'}, status= status.HTTP_404_NOT_FOUND)
+            return None
+
+    def get(self, request, pk):
+        movie = self.get_object(pk)
+        if movie is None:
+            return Response({'error': 'Movie not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = MovieSerializer(movie)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk):
+        movie = self.get_object(pk)
+        if movie is None:
+            return Response({'error': 'Movie not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = MovieSerializer(movie, data=request.data)
         if serializer.is_valid():
-            updated_movie = serializer.save()
-            return Response(MovieSerializer(updated_movie).data, status= status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status= status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.method == 'DELETE':
-        try:
-            movie = Movie.objects.get(pk=pk)
-        except Movie.DoesNotExist:
-            return Response({'error': 'Movie not found'}, status= status.HTTP_404_NOT_FOUND)
-
+    def delete(self, request, pk):
+        movie = self.get_object(pk)
+        if movie is None:
+            return Response({'error': 'Movie not found'}, status=status.HTTP_404_NOT_FOUND)
         movie.delete()
-        return Response(status= status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
