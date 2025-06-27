@@ -1,47 +1,33 @@
 from rest_framework import serializers
 from watchlist.models import Movie
 
-def rating_validator(value):
-    if value < 0 or value > 10:
-        raise serializers.ValidationError("Rating must be between 0 and 10.")
-    return value
 
-class MovieSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    title = serializers.CharField()
-    year = serializers.DateField()
-    genre = serializers.CharField()
-    director = serializers.CharField()
-    rating = serializers.FloatField(validators=[rating_validator])
+class MovieSerializer(serializers.ModelSerializer):
 
-    def create(self, validated_data):
-        return Movie.objects.create(**validated_data)
-    
-    def update(self, instance, validated_data):
-        instance.title = validated_data.get('title', instance.title)
-        instance.year = validated_data.get('year', instance.year)
-        instance.genre = validated_data.get('genre', instance.genre)
-        instance.director = validated_data.get('director', instance.director)
-        instance.rating = validated_data.get('rating', instance.rating)
-        instance.save()
-        return instance
-    
-    # def validate_rating(self, value):
-    #     if value < 0 or value > 10:
-    #         raise serializers.ValidationError("Rating must be between 0 and 10.")
-    #     return value
-    
-    def validate(self, data):
-        if not data.get('title'):
-            raise serializers.ValidationError("Title is required.")
-        if not data.get('year'):
-            raise serializers.ValidationError("Year is required.")
-        if not data.get('genre'):
-            raise serializers.ValidationError("Genre is required.")
-        if not data.get('director'):
-            raise serializers.ValidationError("Director is required.")
-        return data
-        
+    hit = serializers.SerializerMethodField()
+    class Meta:
+        model = Movie
+        fields = '__all__' # or ['id', 'title', 'description', 'year', 'rating']
+        read_only_fields = ['id']  # Make 'id' read-only if you don't want it to be editable
 
-
+    def get_hit(self, obj):
+        # Custom logic to determine if the movie is a hit
+        if obj.rating >= 8 and obj.rating <= 9:
+            return "hit"
+        elif obj.rating >= 5 and obj.rating < 8:
+            return "average"
+        elif obj.rating > 9:
+            return "blockbuster"
+        else:
+            return "flop"
     
+
+    def validate_rating(self, value):
+        if value < 0 or value > 10:
+            raise serializers.ValidationError("Rating must be between 0 and 10.")
+        return value
+    
+    def validate_year(self, value):
+        if value.year < 1888:  # The first movie was made in 1888
+            raise serializers.ValidationError("Year must be 1888 or later.")
+        return value
