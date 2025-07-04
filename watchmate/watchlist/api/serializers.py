@@ -1,33 +1,26 @@
+from tkinter import W
+from watchlist.models import Watchlist, StreamPlatform, Review
 from rest_framework import serializers
-from watchlist.models import Movie
 
+# Ensure the import path is correct based on your project structure
 
-class MovieSerializer(serializers.ModelSerializer):
-
-    hit = serializers.SerializerMethodField()
+class WatchlistSerializer(serializers.ModelSerializer):
+    reviews = serializers.StringRelatedField(many=True, read_only=True)
     class Meta:
-        model = Movie
-        fields = '__all__' # or ['id', 'title', 'description', 'year', 'rating']
-        read_only_fields = ['id']  # Make 'id' read-only if you don't want it to be editable
+        model = Watchlist
+        fields = '__all__'
 
-    def get_hit(self, obj):
-        # Custom logic to determine if the movie is a hit
-        if obj.rating >= 8 and obj.rating <= 9:
-            return "hit"
-        elif obj.rating >= 5 and obj.rating < 8:
-            return "average"
-        elif obj.rating > 9:
-            return "blockbuster"
-        else:
-            return "flop"
-    
+class StreamPlatformSerializer(serializers.ModelSerializer):
 
-    def validate_rating(self, value):
-        if value < 0 or value > 10:
-            raise serializers.ValidationError("Rating must be between 0 and 10.")
-        return value
-    
-    def validate_year(self, value):
-        if value.year < 1888:  # The first movie was made in 1888
-            raise serializers.ValidationError("Year must be 1888 or later.")
-        return value
+    # watchlist = WatchlistSerializer(many=True, read_only=True)
+    watchlist = serializers.StringRelatedField(many=True, read_only=True)
+    class Meta:
+        model = StreamPlatform
+        fields = '__all__'
+
+class ReviewSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Review  # Use the through model for the many-to-many relationship
+        fields = '__all__'
+        read_only_fields = ('watchlist',)  # Make watchlist read-only if you don't want to allow creation of reviews directly through it
